@@ -56,8 +56,7 @@ def get_dataset(args):
         train_transform, test_transform = im_transforms(args)
         train_set = IMAGE_DATASET(args, train_transform, ['train_images', 'trans_val_images', 'cis_val_images'], 
                                  args['return_alt_pos'], args['return_seq_pos'], args['return_oracle_pos'], 
-                                  False, args['cache_images'])
-
+                                  False, args['cache_images'])    
         
 
         # ['train_images', 'trans_val_images', 'cis_val_images']
@@ -153,7 +152,11 @@ def get_color_distortion(s=0.5):  # 0.5 for CIFAR10 by default
     color_distort = transforms.Compose([rnd_color_jitter, rnd_gray])
     return color_distort
 
-
+'''
+train_set = IMAGE_DATASET(args, train_transform, ['train_images', 'trans_val_images', 'cis_val_images'], 
+                                 args['return_alt_pos'], args['return_seq_pos'], args['return_oracle_pos'], 
+                                  False, args['cache_images'])
+'''
 class IMAGE_DATASET(torch.utils.data.Dataset):
 
     def __init__(self, args, transform, split_names, return_alt_pos, return_seq_pos, 

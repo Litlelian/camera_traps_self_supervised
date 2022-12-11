@@ -5,7 +5,7 @@ import pandas as pd
 import random
 import datetime
 import argparse
-
+import sys
 
 def main(args):
 
@@ -30,6 +30,12 @@ def main(args):
     for val in ['x1','x2','y1','y2','width','height']:
         path_to_box[val] = path_to_box[val].astype(int)
     path_to_box['area'] = path_to_box['width']*path_to_box['height']
+    # print(path_to_box.columns)
+    '''
+    Index(['img_name', 'x1', 'x2', 'y1', 'y2', 'width', 'height', 'img_path',
+       'img_set', 'img_id', 'area'],
+      dtype='object')
+    '''
 
     ## Load annotation information (not to be used during self-supervised stage)
     with open('{}{}'.format(args['input_root_dir'],args['annotation_file'])) as f:
@@ -37,13 +43,22 @@ def main(args):
     cct_ann_df = pd.DataFrame(info_cct['annotations'])
 
     cct_ann_df['bbox'] = cct_ann_df['bbox'].apply(lambda x:x if type(x)==list else [0.0,0.0,0.0,0.0])
-    cct_ann_df['x1'] = cct_ann_df['bbox'].apply(lambda x: int(x[0]))
-    cct_ann_df['y1'] = cct_ann_df['bbox'].apply(lambda x: int(x[1]))
-    cct_ann_df['width'] = cct_ann_df['bbox'].apply(lambda x: int(x[2]))
-    cct_ann_df['height'] = cct_ann_df['bbox'].apply(lambda x: int(x[3]))
-
+    cct_ann_df['x1'] = cct_ann_df['bbox'].apply(lambda x: int(x[0]/2))
+    cct_ann_df['y1'] = cct_ann_df['bbox'].apply(lambda x: int(x[1])/2)
+    cct_ann_df['width'] = cct_ann_df['bbox'].apply(lambda x: int(x[2]/2))
+    cct_ann_df['height'] = cct_ann_df['bbox'].apply(lambda x: int(x[3]/2))
+    # print(cct_ann_df.columns)
+    '''
+    Index(['image_id', 'category_id', 'id', 'bbox', 'x1', 'y1', 'width', 'height'], dtype='object')
+    '''
     ## merge annotation info with box path info
     cct_ann_df = cct_ann_df.merge(path_to_box,left_on=['image_id','x1','y1','width','height'],right_on=['img_id','x1','y1','width','height'],how='left')
+    # print(cct_ann_df.columns)
+    '''
+    Index(['image_id', 'category_id', 'id', 'bbox', 'x1', 'y1', 'width', 'height',
+       'img_name', 'x2', 'y2', 'img_path', 'img_set', 'img_id', 'area'],
+      dtype='object')
+    '''
 
     ## Load image-level information
     with open('{}{}'.format(args['input_root_dir'],args['annotation_file'])) as f:
@@ -58,6 +73,14 @@ def main(args):
     ## merge annotation info with image-level info
     context_info = cct_ann_df.merge(cct_info_df,left_on='image_id',right_index=True,how='left')
     context_info.drop(columns=['image_id','date_captured'],inplace=True)
+    # print(context_info.columns)
+    '''
+    Index(['category_id', 'id', 'bbox', 'x1', 'y1', 'width', 'height', 'img_name',
+       'x2', 'y2', 'img_path', 'img_set', 'img_id', 'area', 'file_name',
+       'rights_holder', 'img_height', 'img_width', 'frame_num', 'location',
+       'seq_num_frames', 'seq_id', 'datetime', 'time'],
+      dtype='object')
+    '''
     ## drop images with no boxes
     context_info.dropna(axis=0,subset=['img_name'],inplace=True)
 
@@ -104,10 +127,10 @@ def main(args):
     ## sample 1,10% subset of training data (for semi-supervised stage)
     context_info['is_in_train_1perc'] = False
     context_info['is_in_train_10perc'] = False
-    species_list = list(context_info.query('img_set=="train"').species.unique())
+    species_list = list(context_info.query('img_set=="train_images"').species.unique())
     for perc in [0.01,0.1]:
         for species in species_list:
-            sub_df = context_info.query('img_set=="train"').query('species==@species')
+            sub_df = context_info.query('img_set=="train_images"').query('species==@species')
             random.seed(args['seed']) # change to get a different subsample per species
             species_filenames = random.sample(set(sub_df.file_name), int(np.ceil(len(sub_df)*perc)))
             context_info.loc[context_info.file_name.isin(species_filenames),'is_in_train_{}perc'.format(int(100*perc))] = True
@@ -128,8 +151,9 @@ if __name__ == '__main__':
     # turn the args into a dictionary
     args = vars(parser.parse_args())
     
-    args['data_dir'] = '/path/to/dataset/' ## THIS should be replaced with the directory of the downloaded data
-    args['input_root_dir'] = args['data_dir'] + args['dataset'] +'/'
+    args['data_dir'] = './cam_data' ## THIS should be replaced with the directory of the downloaded data
+    # args['input_root_dir'] = args['data_dir'] + args['dataset'] +'/'
+    args['input_root_dir'] = args['data_dir'] +'/'
     args['image_dir'] = 'cam_data/{}/'.format(args['dataset'])
     
     main(args)

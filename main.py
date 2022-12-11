@@ -10,6 +10,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR, CosineAnnealingLR
 from torch.utils.data import DataLoader, SubsetRandomSampler, Subset
 from torchvision.models import resnet18, resnet50
+from torchsummary import summary
 
 from models import EmbModel
 import utils as ut
@@ -34,9 +35,6 @@ def train(model, args, train_loader, optimizer, scheduler, epoch):
         x = torch.cat((data['im_t1'], data['im_t2']), 0).to(args['device'])
         b_size = x.shape[0]
         op = model(x)
-        
-
-
         
         if args['return_context']:
             data['con'] = data['con'].to(args['device'])
@@ -130,6 +128,7 @@ def main(args):
             train_set = Subset(train_set, train_inds_lin_1)
         elif args['supervised_amt'] == 10:
             train_set = Subset(train_set, train_inds_lin_10)
+            
     train_loader = DataLoader(train_set, batch_size=args['batch_size'], shuffle=True,
                               num_workers=args['workers'], drop_last=False)
     # data loaders - used for linear evaluation 
@@ -141,13 +140,14 @@ def main(args):
                                       num_workers=args['workers'], shuffle=False)
     test_loader_lin      = DataLoader(test_set_lin,  batch_size=args['batch_size'], 
                                       num_workers=args['workers'], shuffle=False)        
-
+    
     if args['pretrained_model'] != '':
         args['pretext_finetune'] = True
     
     # initialize model
     base_encoder = eval(args['backbone'])
     model = EmbModel(base_encoder, args).to(args['device'])
+    summary(model, (3, 112, 112))
     
     if args['pretrained_model'] != '':
         # need to exlude projector as it will be a different size for supervised

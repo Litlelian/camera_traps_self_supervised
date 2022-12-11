@@ -246,16 +246,21 @@ class BoxCropper(object):
 
                         if (isinstance(x1, numbers.Number) and isinstance(y1, numbers.Number)
                                 and isinstance(width, numbers.Number) and isinstance(height, numbers.Number)):
-                            x1 = int(x1)
-                            y1 = int(y1)
-                            width = int(width)
-                            height = int(height)
+                            x1 = int(x1/(img_width/1024))
+                            y1 = int(y1/(img_width/1024))
+                            width = int(width/(img_width/1024))
+                            height = int(height/(img_width/1024))
                             x2 = x1 + width
                             y2 = y1 + height
-
+                            if x2 > current_image.shape[1]:
+                                x2 = current_image.shape[1]
+                            if y2 > current_image.shape[0]:
+                                y2 = current_image.shape[0]
                         crop_img = current_image[y1:y2, x1:x2].copy()
+                        # print(ann_object['bbox'])
+                        # print(crop_img.shape)
+                        # print(current_image.shape)
                         species = category_id_to_species[ann_object['category_id']]
-                       
 
                         new_row = {'img_name':'{}_{}_{}.jpg'.format(str(im_id),num_box,species),
                                              'x1':x1,'x2':x2,'y1':y1,'y2':y2,'width':width,'height':height}
@@ -294,7 +299,8 @@ def main(args):
         BoxCrop = BoxCropper(dataset,
                              dataset_style=args['dataset'],
                              annIds_to_keep=final_annIds,
-                             root_dir=args['input_root_dir']+'eccv_18_cropped/',
+                            #  root_dir=args['input_root_dir']+'eccv_18_cropped/',
+                            root_dir=args['input_root_dir']+'eccv_18_all_images_sm/',
                              save_crops=True,  # save crops to following dir
                              output_root_dir=args['output_root_dir']+folder_name)
 
@@ -346,8 +352,9 @@ if __name__ == '__main__':
     # turn the args into a dictionary
     args = vars(parser.parse_args())
 
-    args['data_dir'] = '/path/to/dataset/' ## THIS should be replaced with the directory of the downloaded data
-    args['input_root_dir'] = args['data_dir'] + args['dataset'] +'/'
+    args['data_dir'] = './cam_data' ## THIS should be replaced with the directory of the downloaded data
+    # args['input_root_dir'] = args['data_dir'] + args['dataset'] +'/'
+    args['input_root_dir'] = args['data_dir'] +'/'
     args['output_root_dir'] = 'cam_data/{}/'.format(args['dataset'])
     args['metadata'] = os.path.join(args['output_root_dir'], args['dataset']+'_context_file.csv')
     if args['dataset'] == 'kenya':
